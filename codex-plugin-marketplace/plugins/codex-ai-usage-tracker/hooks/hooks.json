@@ -1,0 +1,27 @@
+{
+  "description": "Record Codex usage after each completed run.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CODEX_PLUGIN_ROOT}/scripts/codex-usage-hook.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CODEX_PLUGIN_ROOT}/scripts/codex-usage-hook.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
