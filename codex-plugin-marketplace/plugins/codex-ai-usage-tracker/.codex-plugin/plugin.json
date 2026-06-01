@@ -1,6 +1,6 @@
 {
   "name": "codex-ai-usage-tracker",
-  "version": "0.1.0",
+  "version": "0.1.0+codex.local-20260601-191500",
   "description": "Track AI token usage from Codex-oriented workflows with a local JSONL log and report CLI.",
   "author": {
     "name": "Local Tools"

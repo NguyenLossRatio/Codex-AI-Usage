@@ -1,11 +1,20 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { basename, dirname, resolve } from 'node:path';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { basename, dirname, join, resolve } from 'node:path';
 
 const GROUP_FIELDS = new Set(['day', 'model', 'project', 'session', 'source']);
 
 export function defaultLogPath() {
   return process.env.AI_USAGE_LOG ?? '.ai-usage/events.jsonl';
+}
+
+export function defaultHookLogPath(payload = {}) {
+  if (process.env.AI_USAGE_LOG) {
+    return process.env.AI_USAGE_LOG;
+  }
+
+  return payload.cwd ? join(payload.cwd, '.ai-usage', 'events.jsonl') : defaultLogPath();
 }
 
 export function trackEvent(input) {
@@ -195,6 +204,42 @@ export async function eventFromCodexHookPayload(payload) {
     return null;
   }
 
+  return eventFromUsageSource(payload, usageSource);
+}
+
+export async function eventFromCodexTranscript(transcriptPath, payload = {}) {
+  const usageSource = await getTranscriptUsage(transcriptPath);
+  if (!usageSource) {
+    return null;
+  }
+
+  return eventFromUsageSource({
+    ...payload,
+    transcript_path: transcriptPath
+  }, usageSource);
+}
+
+export async function findLatestCodexTranscript(options = {}) {
+  const codexHome = options.codexHome ?? process.env.CODEX_HOME ?? join(homedir(), '.codex');
+  const roots = options.roots ?? [
+    join(codexHome, 'sessions'),
+    join(codexHome, 'archived_sessions')
+  ];
+  const files = [];
+
+  for (const root of roots) {
+    files.push(...await findJsonlFiles(root));
+  }
+
+  if (files.length === 0) {
+    return null;
+  }
+
+  files.sort((left, right) => right.mtimeMs - left.mtimeMs);
+  return files[0].path;
+}
+
+function eventFromUsageSource(payload, usageSource) {
   const usage = usageSource.usage;
   const timestamp = usageSource.timestamp ?? payload.timestamp;
   const turnId = payload.turn_id ?? usageSource.turnId ?? null;
@@ -230,6 +275,31 @@ export async function eventFromCodexHookPayload(payload) {
       rateLimits: usageSource.rateLimits ?? null
     }
   });
+}
+
+async function findJsonlFiles(root) {
+  let entries;
+  try {
+    entries = await readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'EACCES' || error.code === 'EPERM') {
+      return [];
+    }
+    throw error;
+  }
+
+  const files = [];
+  for (const entry of entries) {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await findJsonlFiles(path));
+    } else if (entry.isFile() && entry.name.endsWith('.jsonl')) {
+      const info = await stat(path);
+      files.push({ path, mtimeMs: info.mtimeMs });
+    }
+  }
+
+  return files;
 }
 
 export function parseDelimitedNumber(value, label) {

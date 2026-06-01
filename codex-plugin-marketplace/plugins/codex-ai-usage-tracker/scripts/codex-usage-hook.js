@@ -2,26 +2,40 @@
 
 import {
   appendEventOnce,
-  defaultLogPath,
+  defaultHookLogPath,
   eventFromCodexHookPayload,
+  eventFromCodexTranscript,
+  findLatestCodexTranscript,
   readStdin
 } from '../src/usage-tracker.js';
 
 async function main() {
   const rawPayload = await readStdin();
-  if (!rawPayload.trim()) {
-    return;
-  }
+  const payload = rawPayload.trim() ? JSON.parse(rawPayload) : {};
 
-  const payload = JSON.parse(rawPayload);
-  const event = await eventFromCodexHookPayload(payload);
+  const event = await eventFromCodexHookPayload(payload) ?? await eventFromLatestTranscript(payload);
 
   if (!event) {
     return;
   }
 
-  const logPath = process.env.AI_USAGE_LOG ?? defaultLogPath();
+  const logPath = defaultHookLogPath(payload);
   await appendEventOnce(logPath, event);
+}
+
+async function eventFromLatestTranscript(payload) {
+  const transcriptPath = payload.transcript_path ?? await findLatestCodexTranscript();
+  if (!transcriptPath) {
+    return null;
+  }
+
+  return eventFromCodexTranscript(transcriptPath, {
+    cwd: payload.cwd ?? process.cwd(),
+    hook_event_name: payload.hook_event_name ?? 'Stop',
+    model: payload.model,
+    session_id: payload.session_id,
+    turn_id: payload.turn_id
+  });
 }
 
 main().catch((error) => {

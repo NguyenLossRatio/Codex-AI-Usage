@@ -26,7 +26,8 @@ node bin/ai-usage.js export --by day,project,model
 
 ## Notes
 
-- The default log path is `.ai-usage/events.jsonl`.
+- The default log path is `.ai-usage/events.jsonl`; `.jsonl` is JSON Lines, not `.json1`.
 - Set `AI_USAGE_LOG` to route usage into another file.
 - Costs are only recorded when explicitly supplied with `--cost` or estimated from a user-provided `--pricing` JSON file.
 - Hook payloads with direct `usage` are recorded as-is; otherwise the tracker reads `last_token_usage` from the Codex transcript referenced by `transcript_path`.
+- If a hook payload is missing, the hook falls back to the newest transcript under the local Codex sessions folder.

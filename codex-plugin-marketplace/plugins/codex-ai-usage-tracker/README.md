@@ -30,6 +30,8 @@ node bin/ai-usage.js export --by day,project,model
 
 The default log file is `.ai-usage/events.jsonl`. Override it with `--log path/to/events.jsonl` or the `AI_USAGE_LOG` environment variable.
 
+The `.jsonl` extension is intentional: it is JSON Lines, with one JSON event per line. That lets the tracker append each completed Codex run without rewriting a single large `.json` array.
+
 ## Optional Cost Estimates
 
 The tracker does not ship with pricing tables. To estimate costs, pass a pricing JSON file:
@@ -66,7 +68,7 @@ The hook runs:
 node scripts/codex-usage-hook.js
 ```
 
-Codex hook payloads currently expose session metadata such as `model`, `session_id`, `turn_id`, and `transcript_path`. If a future hook payload includes direct `usage` data, the tracker records that. Otherwise, it reads the latest `token_count` event from the transcript and records `last_token_usage`.
+Codex hook payloads currently expose session metadata such as `model`, `session_id`, `turn_id`, and `transcript_path`. If a future hook payload includes direct `usage` data, the tracker records that. Otherwise, it reads the latest `token_count` event from the transcript and records `last_token_usage`. If Codex invokes the hook without stdin payload data, the hook falls back to the newest transcript under the local Codex sessions folder.
 
 The manual plugin entrypoint is:
 

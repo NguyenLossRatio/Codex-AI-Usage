@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
@@ -8,8 +8,11 @@ import {
   aggregateEvents,
   appendEventOnce,
   appendEvent,
+  defaultHookLogPath,
   eventFromCodexHookPayload,
+  eventFromCodexTranscript,
   estimateCostUsd,
+  findLatestCodexTranscript,
   formatReport,
   loadEvents,
   trackEvent
@@ -156,6 +159,75 @@ test('eventFromCodexHookPayload falls back to transcript token_count events', as
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('eventFromCodexTranscript records transcript usage without a hook payload', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ai-usage-'));
+  const transcript = join(dir, 'rollout.jsonl');
+
+  try {
+    await writeFile(transcript, [
+      JSON.stringify({
+        timestamp: '2026-06-01T11:59:00.000Z',
+        type: 'turn_context',
+        payload: { model: 'gpt-5-codex' }
+      }),
+      JSON.stringify({
+        timestamp: '2026-06-01T12:00:00.000Z',
+        type: 'event_msg',
+        payload: {
+          type: 'token_count',
+          info: {
+            last_token_usage: {
+              input_tokens: 11,
+              cached_input_tokens: 7,
+              output_tokens: 5,
+              reasoning_output_tokens: 3
+            }
+          }
+        }
+      })
+    ].join('\n'));
+
+    const event = await eventFromCodexTranscript(transcript, {
+      cwd: 'C:\\Users\\Chill\\vsCode\\Codex-AI-Usage'
+    });
+
+    assert.equal(event.project, 'Codex-AI-Usage');
+    assert.equal(event.model, 'gpt-5-codex');
+    assert.equal(event.totalTokens, 26);
+    assert.equal(event.metadata.transcriptPath, transcript);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('findLatestCodexTranscript returns the newest Codex JSONL transcript', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ai-usage-'));
+  const olderDir = join(dir, 'sessions', '2026', '06', '01');
+  const newerDir = join(dir, 'archived_sessions');
+  const older = join(olderDir, 'older.jsonl');
+  const newer = join(newerDir, 'newer.jsonl');
+
+  try {
+    await mkdir(olderDir, { recursive: true });
+    await mkdir(newerDir, { recursive: true });
+    await writeFile(older, '{}\n');
+    await writeFile(newer, '{}\n');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await writeFile(newer, '{"newer":true}\n');
+
+    assert.equal(await findLatestCodexTranscript({ codexHome: dir }), newer);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('defaultHookLogPath writes hook logs under the project cwd', () => {
+  assert.equal(
+    defaultHookLogPath({ cwd: 'C:\\Users\\Chill\\vsCode\\Codex-AI-Usage' }),
+    'C:\\Users\\Chill\\vsCode\\Codex-AI-Usage\\.ai-usage\\events.jsonl'
+  );
 });
 
 test('aggregateEvents groups usage and sums known costs', () => {
