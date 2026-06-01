@@ -1,0 +1,20 @@
+{
+  "name": "codex-ai-usage",
+  "interface": {
+    "displayName": "Codex AI Usage"
+  },
+  "plugins": [
+    {
+      "name": "codex-ai-usage-tracker",
+      "source": {
+        "source": "local",
+        "path": "./codex-plugin-marketplace/plugins/codex-ai-usage-tracker"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Development"
+    }
+  ]
+}

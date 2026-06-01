@@ -1,7 +1,7 @@
 {
-  "name": "local-codex-plugins",
+  "name": "codex-ai-usage",
   "interface": {
-    "displayName": "Local Codex Plugins"
+    "displayName": "Codex AI Usage"
   },
   "plugins": [
     {

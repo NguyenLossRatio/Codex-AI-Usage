@@ -1,3 +1,8 @@
+---
+name: ai-usage
+description: Record, inspect, summarize, or export local AI usage for Codex-assisted work.
+---
+
 # AI Usage Tracking
 
 Use this skill when the user wants to record, inspect, summarize, or export AI usage for Codex-assisted work.

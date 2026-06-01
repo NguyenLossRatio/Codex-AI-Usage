@@ -13,7 +13,6 @@
     "telemetry"
   ],
   "skills": "./skills/",
-  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Codex AI Usage Tracker",
     "shortDescription": "Track Codex token usage locally.",
